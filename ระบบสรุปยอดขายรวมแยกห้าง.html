@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ระบบสรุปยอดขายรวม — 4 ห้าง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root{
+    --bg:#eef1f4; --surface:#fff; --surface-2:#f6f8fa;
+    --ink:#182230; --ink-soft:#5a6675; --line:#dde3ea; --line-strong:#c6cfda;
+    --brand:#0f5d5a; --brand-soft:#e2efee; --accent:#c1741a; --accent-soft:#fbf1e3;
+    --alert:#b3261e; --alert-soft:#fbe9e7;
+    --group:#e8eef4; --group-strong:#dbe6f0; --total:#f7e9c9;
+    --radius:10px; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"IBM Plex Sans Thai",system-ui,sans-serif;background:var(--bg);color:var(--ink);
+    line-height:1.5;font-size:14px;padding:24px 16px 64px}
+  .wrap{max-width:1120px;margin:0 auto}
+  header.app{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .brandmark{display:flex;align-items:center;gap:12px}
+  .logo{width:42px;height:42px;border-radius:9px;flex:none;background:var(--brand);color:#fff;
+    display:grid;place-items:center;font-weight:700;font-size:20px;box-shadow:0 2px 0 rgba(0,0,0,.12) inset}
+  h1{font-size:19px;font-weight:700;letter-spacing:-.2px}
+  .sub{color:var(--ink-soft);font-size:12.5px;margin-top:1px}
+  .env{font-family:var(--mono);font-size:11px;color:var(--ink-soft);background:var(--surface);
+    border:1px solid var(--line);padding:5px 10px;border-radius:20px}
+  .env b{color:var(--brand)}
+
+  .steps{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .step{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);
+    background:var(--surface);border:1px solid var(--line);padding:7px 12px;border-radius:20px}
+  .step .n{width:18px;height:18px;border-radius:50%;background:var(--line-strong);color:#fff;
+    font-size:11px;font-weight:600;display:grid;place-items:center;flex:none}
+  .step.on{color:var(--ink);border-color:var(--brand);background:var(--brand-soft)}
+  .step.on .n{background:var(--brand)}
+
+  .stores{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+  .store{text-align:left;cursor:pointer;background:var(--surface);border:1.5px solid var(--line);
+    border-radius:var(--radius);padding:12px 13px;transition:.15s}
+  .store:hover{border-color:var(--line-strong)}
+  .store.active{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .store .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;
+    padding:2px 7px;border-radius:5px;margin-bottom:7px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
+  .store.active .tag{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .store .nm{font-weight:600;font-size:14px}
+  .store .fmt{font-size:11px;color:var(--ink-soft);margin-top:2px}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:16px}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:13px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .panel-h h2{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .panel-h h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--brand)}
+  .panel-b{padding:16px}
+
+  .drop{border:1.5px dashed var(--line-strong);border-radius:var(--radius);padding:26px 18px;
+    text-align:center;cursor:pointer;transition:.15s;background:var(--surface-2)}
+  .drop:hover,.drop.drag{border-color:var(--brand);background:var(--brand-soft)}
+  .drop .ic{font-size:26px;margin-bottom:6px}
+  .drop .t{font-weight:600}
+  .drop .h{font-size:12px;color:var(--ink-soft);margin-top:3px}
+  .rules{margin-top:14px;font-size:12.5px;color:var(--ink-soft);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .rules b{color:var(--ink)}
+  .rules ol{margin:6px 0 0 18px;display:grid;gap:3px}
+  .rules code{font-family:var(--mono);font-size:11.5px;background:#fff;border:1px solid var(--line);padding:0 4px;border-radius:4px}
+
+  .filebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:var(--brand-soft);
+    border:1px solid var(--brand);color:var(--brand);padding:5px 11px;border-radius:20px;font-weight:500}
+  .inspect{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+  .inspect span{color:var(--brand);font-weight:600}
+
+  .btn{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border-radius:8px;
+    padding:8px 15px;border:1px solid transparent;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.primary:hover{background:#0c4d4a}
+  .btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--line-strong)}
+  .btn.ghost:hover{border-color:var(--brand);color:var(--brand)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .report-title{text-align:center;padding:12px;background:var(--brand);color:#fff;font-weight:700;font-size:15px;border-radius:8px 8px 0 0}
+  .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px}
+  th,td{border:1px solid var(--line);padding:6px 9px;text-align:right;white-space:nowrap}
+  th{background:var(--surface-2);font-weight:600;color:var(--ink);text-align:center}
+  thead tr:first-child th{background:var(--group-strong)}
+  td.tx,th.tx{text-align:left}
+  td.ct,th.ct{text-align:center}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  tr.group td{background:var(--group);font-weight:600;color:var(--brand)}
+  tr.total td{background:var(--total);font-weight:700;font-size:13px}
+  tr.miss td{background:var(--alert-soft);color:var(--alert)}
+  .vat-col{background:var(--accent-soft)}
+  th.vat-col{background:#f3e2c6}
+
+  .empty{border:1px dashed var(--line-strong);border-radius:8px;padding:34px 18px;text-align:center;color:var(--ink-soft)}
+  .empty .ic{font-size:30px;margin-bottom:8px;opacity:.6}
+  .warn{border:1px solid var(--alert);background:var(--alert-soft);color:var(--alert);
+    border-radius:8px;padding:12px 14px;margin-top:14px;font-size:12.5px}
+  .warn b{display:block;margin-bottom:5px}
+  .warn ul{margin:4px 0 6px 18px}
+  .note{margin-top:14px;font-size:12px;color:var(--ink-soft);border-left:3px solid var(--accent);
+    background:var(--accent-soft);padding:9px 12px;border-radius:0 6px 6px 0}
+  .hide{display:none}
+  footer{text-align:center;color:var(--ink-soft);font-size:11.5px;margin-top:26px}
+  @media(max-width:720px){.stores{grid-template-columns:repeat(2,1fr)}h1{font-size:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div class="brandmark">
+      <div class="logo">฿</div>
+      <div>
+        <h1>ระบบสรุปยอดขายรวม</h1>
+        <div class="sub">นำเข้าไฟล์แยกแต่ละห้าง → แปลงเป็นรายงานมาตรฐานเดียวกัน</div>
+      </div>
+    </div>
+    <div class="env">โหมด <b>ใช้งานจริง</b> · ประมวลผลในเครื่อง (ไฟล์ไม่ถูกส่งออก)</div>
+  </header>
+
+  <div class="steps">
+    <div class="step on" id="st1"><span class="n">1</span>เลือกห้าง</div>
+    <div class="step" id="st2"><span class="n">2</span>นำเข้าไฟล์ Excel</div>
+    <div class="step" id="st3"><span class="n">3</span>ดูรายงาน / ดาวน์โหลด</div>
+  </div>
+
+  <div class="stores" id="storeRail"></div>
+
+  <div class="panel">
+    <div class="panel-h">
+      <h2><span class="dot"></span>นำเข้าไฟล์ — <span id="upStore">Dohome</span></h2>
+      <span class="inspect" id="inspect"></span>
+    </div>
+    <div class="panel-b">
+      <div class="drop" id="drop">
+        <div class="ic">⬆️</div>
+        <div class="t">ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</div>
+        <div class="h">รองรับ .xlsx / .xls — ต้องมี Sheet “Master” อยู่ในไฟล์เดียวกัน</div>
+        <input type="file" id="file" accept=".xlsx,.xls" class="hide">
+      </div>
+      <div class="rules" id="rules"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h">
+      <h2><span class="dot"></span>รายงานผลลัพธ์</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" id="btnReset">ล้าง</button>
+        <button class="btn primary" id="btnExport" disabled>⬇ ดาวน์โหลด Excel</button>
+      </div>
+    </div>
+    <div class="panel-b">
+      <div class="filebar" id="filebar"></div>
+      <div id="reportArea"></div>
+      <div id="warnArea"></div>
+    </div>
+  </div>
+
+  <footer>ประมวลผลด้วย logic ที่ปรับตามไฟล์จริงของแต่ละห้าง · หากโครงสร้างไฟล์เปลี่ยน ระบบตรวจหัวตาราง/Master อัตโนมัติ</footer>
+</div>
+
+<script>
+/* ============ helpers ============ */
+const NF=n=>(n==null||n==="")?"":Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const NI=n=>(n==null||n==="")?"":Math.round(Number(n)).toLocaleString("en-US");
+
+// 1-based cell accessor over a worksheet range (mirrors openpyxl cell(r,c))
+function grid(ws){
+  if(!ws||!ws['!ref']) return {nrows:0,ncols:0,val:()=>null};
+  const R=XLSX.utils.decode_range(ws['!ref']);
+  return {
+    nrows:R.e.r+1, ncols:R.e.c+1,
+    val:(r,c)=>{ const cell=ws[XLSX.utils.encode_cell({r:r-1,c:c-1})]; return cell?cell.v:null; }
+  };
+}
+const T=v=>v==null?"":String(v).trim();
+const digits=v=>{ const m=T(v).match(/(\d+)/); return m?m[1]:null; };
+
+/* ============ store configs + build(wb) ============ */
+const STORES={
+
+  /* ---------- DOHOME ---------- */
+  dohome:{
+    tag:"DOHOME", name:"Dohome", fmt:"สาขาเป็นคอลัมน์ (D เป็นต้นไป)",
+    title:"รายงานสรุปยอดขาย — Dohome",
+    rules:[
+      "อ่านหัวคอลัมน์สาขา (ไทย) ตั้งแต่คอลัมน์ D — ตัดคอลัมน์ที่ขึ้นต้น <code>To go</code> / <code>Dohome</code> / <code>Marine</code> และคอลัมน์ <code>รวม</code> ออก",
+      "รวม (SUM) แต่ละคอลัมน์สาขาลงถึงแถวสินค้าสุดท้าย (เช็คจากคอลัมน์ “ชื่อสินค้า”) → จำนวนขาย",
+      "แถวถัดจากสินค้าสุดท้าย = ยอดเงิน (ยังไม่รวม VAT) → คำนวณ <code>รวม VAT = ยอด × 1.07</code>",
+      "map เขตจาก Sheet Master (A=ชื่อสาขา, B=เขต)"
+    ],
+    cols:[
+      {k:"no",t:"ลำดับ",cls:"ct"},{k:"branch",t:"ชื่อสาขา",cls:"tx"},{k:"zone",t:"เขต",cls:"ct"},
+      {k:"qty",t:"จำนวนขาย",fmt:NF,z:"#,##0.00"},
+      {k:"ex",grp:"ยอดขาย",t:"ไม่รวม VAT",fmt:NF,z:"#,##0.00"},
+      {k:"inc",grp:"ยอดขาย",t:"รวม VAT",fmt:NF,vat:true,z:"#,##0.00"}
+    ],
+    build(wb){
+      const ws=wb.Sheets['รายงาน']||wb.Sheets[wb.SheetNames.find(n=>n!=='Master')];
+      const g=grid(ws); if(!g.nrows) throw new Error("ไม่พบชีตข้อมูลยอดขาย");
+      // header row = row containing "ชื่อสินค้า" in col B (default 1)
+      let hr=1; for(let r=1;r<=Math.min(5,g.nrows);r++){ if(T(g.val(r,2))==='ชื่อสินค้า'){hr=r;break;} }
+      const keep=h=>{const s=T(h); if(!s||s==='รวม')return false; return !(s.startsWith('To go')||s.startsWith('Dohome')||s.startsWith('Marine'));};
+      const bcols=[]; for(let c=4;c<=g.ncols;c++){ if(keep(g.val(hr,c))) bcols.push(c); }
+      let lastprod=hr+1; for(let r=hr+1;r<=g.nrows;r++){ const b=g.val(r,2); if(b!=null&&b!=='') lastprod=r; }
+      const amtrow=lastprod+1;
+      const {zmap,zorder}=readZones(wb,1,2);
+      const rows=[],missing=[];
+      for(const c of bcols){
+        const name=T(g.val(hr,c));
+        let qty=0; for(let r=hr+1;r<=lastprod;r++) qty+=Number(g.val(r,c))||0;
+        const ex=Number(g.val(amtrow,c))||0;
+        const z=zmap[name];
+        rows.push({branch:name,zone:z||'ไม่มีใน Master',qty,ex,inc:ex*1.07});
+        if(z==null) missing.push(name);
+      }
+      return {rows,missing,zoneOrder:zorder};
+    }
+  },
+
+  /* ---------- GB (Global House) ---------- */
+  gb:{
+    tag:"GB", name:"Global House", fmt:"รหัสสาขา GH-xxx",
+    title:"รายงานสรุปยอดขาย — สยามโกลบอลเฮ้าส์",
+    rules:[
+      "อ่านข้อมูลจาก Sheet ยอดขาย: รหัสสาขา (A), ชื่อย่อ (C), จำนวนขาย (E), ยอดขายสุทธิ (F) — ข้ามแถว Grand Total",
+      "map ชื่อสาขา + เขต จาก Sheet Master ผ่านรหัส GH-xxx (A=รหัส, B=ย่อ, C=ชื่อเต็ม, D=เขต)",
+      "รหัสที่ไม่พบใน Master → แสดงในกลุ่ม “ไม่มีใน Master” และเตือน"
+    ],
+    cols:[
+      {k:"no",t:"ลำ",cls:"ct"},{k:"code",t:"รหัสสาขา",cls:"ct"},
+      {k:"short",t:"ชื่อย่อ",cls:"ct"},{k:"full",t:"ชื่อสาขา",cls:"tx"},{k:"zone",t:"เขต",cls:"ct"},
+      {k:"qty",t:"จำนวน",fmt:NI,z:"#,##0"},{k:"amt",t:"ยอดขายสุทธิ",fmt:NF,z:"#,##0.00"}
+    ],
+    build(wb){
+      const g=grid(wb.Sheets['Sheet']); if(!g.nrows) throw new Error("ไม่พบชีต 'Sheet'");
+      let hr=1; for(let r=1;r<=Math.min(8,g.nrows);r++){ if(T(g.val(r,1))==='รหัสสาขา'){hr=r;break;} }
+      const mg=grid(wb.Sheets['Master']); const M={},zorder=[];
+      for(let r=2;r<=mg.nrows;r++){ const code=T(mg.val(r,1)); if(!code)continue;
+        const z=mg.val(r,4); M[code]={short:mg.val(r,2),full:mg.val(r,3),zone:z};
+        if(z!=null&&!zorder.includes(z))zorder.push(z); }
+      const rows=[],missing=[];
+      for(let r=hr+1;r<=g.nrows;r++){
+        const code=T(g.val(r,1)); if(!code||code.includes('Total'))continue;
+        const short=g.val(r,3), qty=Number(g.val(r,5))||0, amt=Number(g.val(r,6))||0;
+        const m=M[code];
+        if(m) rows.push({code,short:m.short||short,full:m.full,zone:m.zone||'ไม่มีใน Master',qty,amt});
+        else { rows.push({code,short,full:'—',zone:'ไม่มีใน Master',qty,amt}); missing.push(code+(short?` (${short})`:'')); }
+      }
+      return {rows,missing,zoneOrder:zorder};
+    }
+  },
+
+  /* ---------- TWD (Thai Watsadu) ---------- */
+  twd:{
+    tag:"TWD", name:"Thai Watsadu", fmt:"มีหัวรายงาน 6 บรรทัด",
+    title:"รายงานสรุปยอดขาย — CRC Thai Watsadu",
+    rules:[
+      "ตัดหัวรายงานด้านบนอัตโนมัติ (หาแถวหัวตาราง “Store”) แล้วอ่านข้อมูลต่อ",
+      "map สาขา + เขต จาก Sheet Master ด้วยรหัสสาขา 5 หลักหน้าชื่อ (กันปัญหาชื่อ Ltd./Limited ต่างกัน)",
+      "ดึง Sales Quantity + Sales Amount มาสรุปต่อเขต — เช็ค Master ทุกครั้ง"
+    ],
+    cols:[
+      {k:"no",t:"ลำ",cls:"ct"},{k:"store",t:"Store",cls:"tx"},{k:"branch",t:"สาขา",cls:"tx"},
+      {k:"zone",t:"เขต",cls:"ct"},{k:"qty",t:"Sales Quantity",fmt:NI,z:"#,##0"},{k:"amt",t:"Sales Amount",fmt:NF,z:"#,##0.00"}
+    ],
+    build(wb){
+      const g=grid(wb.Sheets['Sheet1']||wb.Sheets[wb.SheetNames.find(n=>n!=='Master')]);
+      if(!g.nrows) throw new Error("ไม่พบชีตข้อมูลยอดขาย");
+      let hr=1; for(let r=1;r<=Math.min(12,g.nrows);r++){ if(T(g.val(r,1)).startsWith('Store')){hr=r;break;} }
+      const mg=grid(wb.Sheets['Master']); const M={},zorder=[];
+      for(let r=2;r<=mg.nrows;r++){ const st=mg.val(r,1); if(st==null)continue;
+        const z=mg.val(r,3); M[digits(st)]={name:mg.val(r,2),zone:z};
+        if(z!=null&&!zorder.includes(z))zorder.push(z); }
+      const rows=[],missing=[];
+      for(let r=hr+1;r<=g.nrows;r++){
+        const st=g.val(r,1); if(st==null||st==='')continue;
+        const c=digits(st), qty=Number(g.val(r,2))||0, amt=Number(g.val(r,3))||0;
+        const m=M[c];
+        if(m) rows.push({store:T(st),branch:m.name,zone:m.zone||'สำนักงานใหญ่',qty,amt});
+        else { rows.push({store:T(st),branch:'—',zone:'ไม่มีใน Master',qty,amt}); missing.push(T(st)); }
+      }
+      return {rows,missing,zoneOrder:zorder};
+    }
+  },
+
+  /* ---------- HOMEPRO ---------- */
+  homepro:{
+    tag:"HOMEPRO", name:"HomePro", fmt:"2 ชีตยอดขาย: 500700 + 1569",
+    title:"รายงานสรุปยอดขาย — HOME PRO",
+    rules:[
+      "อ่านยอดรวมแต่ละสาขาจากแถว “Total by Site” ของทั้ง 2 ชีต (500700, 1569)",
+      "สาขาเป็นคอลัมน์คู่ (Billing Qty / Billing Amt) เริ่มคอลัมน์ F — ใช้ 4 ตัวแรกของหัวสาขา map กับ Master",
+      "รวม 500700 + 1569 เป็น “ยอดขายรวม” ต่อสาขา จัดกลุ่มตามเขต",
+      "รหัสสาขาที่ map ไม่เจอใน Master (และมียอด) → แสดงกลุ่ม “ไม่มีใน Master” และเตือน"
+    ],
+    cols:[
+      {k:"no",t:"ลำดับ",cls:"ct"},{k:"branch",t:"ชื่อสาขา",cls:"tx"},{k:"zone",t:"เขต",cls:"ct"},
+      {k:"q1",grp:"ยอดขายแผนก 500700",t:"จำนวน",fmt:NI,z:"#,##0"},{k:"a1",grp:"ยอดขายแผนก 500700",t:"รวมเป็นเงิน",fmt:NF,z:"#,##0.00"},
+      {k:"q2",grp:"ยอดขายแผนก 1569",t:"จำนวน",fmt:NI,z:"#,##0"},{k:"a2",grp:"ยอดขายแผนก 1569",t:"รวมเป็นเงิน",fmt:NF,z:"#,##0.00"},
+      {k:"qt",grp:"ยอดขายรวม",t:"จำนวน",fmt:NI,z:"#,##0"},{k:"at",grp:"ยอดขายรวม",t:"รวมเป็นเงิน",fmt:NF,z:"#,##0.00"}
+    ],
+    build(wb){
+      const totalsOf=ws=>{
+        const g=grid(ws); if(!g.nrows) return {};
+        let tr=null; for(let r=g.nrows;r>=1;r--){ if(T(g.val(r,1))==='Total by Site'){tr=r;break;} }
+        if(!tr) return {};
+        const map={}; let c=6;
+        while(c<=g.ncols){
+          if(T(g.val(3,c))==='Billing Qty'){
+            const h=g.val(2,c);
+            if(h!=null){ const key=T(h).slice(0,4); map[key]={qty:Number(g.val(tr,c))||0,amt:Number(g.val(tr,c+1))||0}; }
+            c+=2;
+          } else c++;
+        }
+        return map;
+      };
+      const t500=totalsOf(wb.Sheets['500700']), t1569=totalsOf(wb.Sheets['1569']);
+      if(!Object.keys(t500).length && !Object.keys(t1569).length) throw new Error("ไม่พบชีต 500700 / 1569");
+      const mg=grid(wb.Sheets['Master']); const M={},order=[],zorder=[];
+      for(let r=2;r<=mg.nrows;r++){ const n=mg.val(r,1); if(n==null||n==='')continue;
+        const key=T(n).slice(0,4), z=mg.val(r,2); if(!M[key]){M[key]={name:T(n),zone:z};order.push(key);}
+        if(z!=null&&!zorder.includes(z))zorder.push(z); }
+      const rows=[],missing=[];
+      for(const key of order){
+        const m=M[key], s5=t500[key]||{qty:0,amt:0}, s1=t1569[key]||{qty:0,amt:0};
+        rows.push({branch:m.name,zone:m.zone||'สำนักงานใหญ่',q1:s5.qty,a1:s5.amt,q2:s1.qty,a2:s1.amt,qt:s5.qty+s1.qty,at:s5.amt+s1.amt});
+      }
+      const seen=new Set(Object.keys(M));
+      new Set([...Object.keys(t500),...Object.keys(t1569)]).forEach(key=>{
+        if(seen.has(key))return; const s5=t500[key]||{qty:0,amt:0}, s1=t1569[key]||{qty:0,amt:0};
+        if(s5.qty||s5.amt||s1.qty||s1.amt){
+          rows.push({branch:key+' (ไม่มีใน Master)',zone:'ไม่มีใน Master',q1:s5.qty,a1:s5.amt,q2:s1.qty,a2:s1.amt,qt:s5.qty+s1.qty,at:s5.amt+s1.amt});
+          missing.push(key);
+        }
+      });
+      return {rows,missing,zoneOrder:zorder};
+    }
+  }
+};
+
+function readZones(wb,nameCol,zoneCol){
+  const g=grid(wb.Sheets['Master']); const zmap={},zorder=[];
+  for(let r=2;r<=g.nrows;r++){ const n=g.val(r,nameCol); if(n==null||n==='')continue;
+    const z=g.val(r,zoneCol); zmap[T(n)]=z; if(z!=null&&!zorder.includes(z))zorder.push(z); }
+  return {zmap,zorder};
+}
+
+/* ============ state ============ */
+let current="dohome", liveData=null, liveFile="";
+
+/* ============ store rail ============ */
+const rail=document.getElementById("storeRail");
+Object.entries(STORES).forEach(([key,s])=>{
+  const el=document.createElement("button");
+  el.className="store"+(key===current?" active":"");
+  el.dataset.key=key;
+  el.innerHTML=`<span class="tag">${s.tag}</span><div class="nm">${s.name}</div><div class="fmt">${s.fmt}</div>`;
+  el.onclick=()=>selectStore(key);
+  rail.appendChild(el);
+});
+function selectStore(key){
+  current=key; liveData=null; liveFile="";
+  document.querySelectorAll(".store").forEach(e=>e.classList.toggle("active",e.dataset.key===key));
+  document.getElementById("upStore").textContent=STORES[key].name;
+  document.getElementById("inspect").textContent="";
+  document.getElementById("file").value="";
+  document.getElementById("btnExport").disabled=true;
+  renderRules(); renderReport(); setStep(1);
+}
+function setStep(n){ [1,2,3].forEach(i=>document.getElementById("st"+i).classList.toggle("on",n>=i)); }
+function renderRules(){
+  const s=STORES[current];
+  document.getElementById("rules").innerHTML=`<b>วิธีประมวลผลของ ${s.name}</b><ol>`+s.rules.map(r=>`<li>${r}</li>`).join("")+`</ol>`;
+}
+
+/* ============ render report ============ */
+function zoneRank(zoneOrder){
+  return z=>{ const i=zoneOrder.indexOf(z); if(i>=0)return i;
+    if(z==='สำนักงานใหญ่')return 9000; if(z==='ไม่มีใน Master')return 9999; return 5000; };
+}
+function headerHTML(cols){
+  if(!cols.some(c=>c.grp)) return "<thead><tr>"+cols.map(c=>`<th class="${c.cls||''} ${c.vat?'vat-col':''}">${c.t}</th>`).join("")+"</tr></thead>";
+  let top="",bot="";
+  for(let i=0;i<cols.length;){
+    const c=cols[i];
+    if(c.grp){ let span=1; while(i+span<cols.length && cols[i+span].grp===c.grp) span++;
+      top+=`<th colspan="${span}" class="ct">${c.grp}</th>`;
+      for(let j=0;j<span;j++){const cc=cols[i+j];bot+=`<th class="${cc.cls||''} ${cc.vat?'vat-col':''}">${cc.t}</th>`;}
+      i+=span;
+    } else { top+=`<th rowspan="2" class="${c.cls||''}">${c.t}</th>`; i++; }
+  }
+  return `<thead><tr>${top}</tr><tr>${bot}</tr></thead>`;
+}
+function sumRow(cols,acc,label,cls){
+  const firstFmt=cols.findIndex(c=>c.fmt);
+  let h=`<tr class="${cls}"><td class="tx" colspan="${firstFmt}">${label}</td>`;
+  h+=cols.filter(c=>c.fmt).map(c=>`<td class="num ${c.vat?'vat-col':''}">${c.fmt(acc[c.k]||0)}</td>`).join("");
+  return h+"</tr>";
+}
+function groupData(data){
+  const rank=zoneRank(data.zoneOrder||[]);
+  const groups={},order=[];
+  data.rows.forEach(r=>{const z=r.zone||'—';if(!groups[z]){groups[z]=[];order.push(z);}groups[z].push(r);});
+  order.sort((a,b)=>rank(a)-rank(b));
+  return {groups,order};
+}
+function renderReport(){
+  const s=STORES[current], area=document.getElementById("reportArea"), warn=document.getElementById("warnArea");
+  document.getElementById("filebar").innerHTML = liveFile?`<span class="chip">📄 ${liveFile}</span>`:"";
+  if(!liveData){
+    area.innerHTML=`<div class="empty"><div class="ic">📊</div>เลือกห้าง <b>${s.name}</b> แล้วนำเข้าไฟล์ Excel ด้านบน<br>ระบบจะแปลงเป็นรายงานสรุปยอดขายให้อัตโนมัติ</div>`;
+    warn.innerHTML=""; return;
+  }
+  const {groups,order}=groupData(liveData), cols=s.cols;
+  let html=`<div class="report-title">${s.title}</div><div class="tbl-scroll"><table>`+headerHTML(cols)+"<tbody>";
+  let no=1; const grand={};
+  order.forEach(z=>{
+    const sub={};
+    groups[z].forEach(r=>{
+      const miss=z==='ไม่มีใน Master';
+      html+="<tr"+(miss?' class="miss"':'')+">"+cols.map(c=>{
+        if(c.k==="no")return `<td class="ct num">${no++}</td>`;
+        let v=r[c.k];
+        if(c.fmt){sub[c.k]=(sub[c.k]||0)+(Number(v)||0);grand[c.k]=(grand[c.k]||0)+(Number(v)||0);}
+        return `<td class="${(c.cls||'')+(c.fmt?' num':'')+(c.vat?' vat-col':'')}">${c.fmt?c.fmt(v):(v==null?'':v)}</td>`;
+      }).join("")+"</tr>";
+    });
+    html+=sumRow(cols,sub,`รวมยอดขาย ${z}`,"group");
+  });
+  html+=sumRow(cols,grand,"ยอดขายรวมสุทธิ","total");
+  html+="</tbody></table></div>";
+  area.innerHTML=html;
+
+  if(liveData.missing&&liveData.missing.length){
+    warn.innerHTML=`<div class="warn"><b>⚠ พบสาขาที่ map กับ Master ไม่ได้ (${liveData.missing.length} รายการ)</b>`+
+      `<ul>`+liveData.missing.map(m=>`<li>${m}</li>`).join("")+`</ul>`+
+      `ระบบยังรวมยอดไว้ในกลุ่ม “ไม่มีใน Master” — แนะนำให้เพิ่มสาขาเหล่านี้ลง Sheet Master เพื่อให้ map เขตได้ครบ</div>`;
+  } else warn.innerHTML="";
+}
+
+/* ============ file handling ============ */
+const drop=document.getElementById("drop"), fileInput=document.getElementById("file");
+drop.onclick=()=>fileInput.click();
+["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("drag");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("drag");}));
+drop.addEventListener("drop",ev=>{if(ev.dataTransfer.files[0])handleFile(ev.dataTransfer.files[0]);});
+fileInput.onchange=e=>{if(e.target.files[0])handleFile(e.target.files[0]);};
+
+function handleFile(f){
+  setStep(2); liveFile=f.name;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    let wb;
+    try{ wb=XLSX.read(new Uint8Array(ev.target.result),{type:"array"}); }
+    catch(err){ document.getElementById("inspect").textContent="อ่านไฟล์ไม่สำเร็จ — ต้องเป็น .xlsx/.xls"; return; }
+    const sheets=wb.SheetNames, hasMaster=sheets.some(n=>/master/i.test(n));
+    document.getElementById("inspect").innerHTML=`sheets: <span>${sheets.join(", ")}</span> · Master: <span>${hasMaster?"พบ":"ไม่พบ"}</span>`;
+    try{
+      liveData=STORES[current].build(wb);
+      renderReport(); setStep(3);
+      document.getElementById("btnExport").disabled=false;
+    }catch(err){
+      liveData=null; renderReport();
+      document.getElementById("warnArea").innerHTML=`<div class="warn"><b>ประมวลผลไม่สำเร็จ</b>${err.message}<br>ตรวจว่าเลือกห้างตรงกับไฟล์ และไฟล์มี Sheet ที่ต้องใช้ครบ</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+/* ============ export (styled) ============ */
+document.getElementById("btnExport").onclick=()=>{
+  if(!liveData)return;
+  const s=STORES[current], cols=s.cols, ncol=cols.length, {groups,order}=groupData(liveData);
+  const firstFmt=cols.findIndex(c=>c.fmt);
+  const aoa=[], meta=[], merges=[];
+
+  // title
+  aoa.push([s.title,...Array(ncol-1).fill("")]); meta.push("title");
+  merges.push({s:{r:0,c:0},e:{r:0,c:ncol-1}});
+
+  // header (grouped -> 2 rows)
+  const grouped=cols.some(c=>c.grp);
+  let hBot;
+  if(grouped){
+    const top=[],bot=[];
+    for(let i=0;i<ncol;){const c=cols[i];
+      if(c.grp){let span=1;while(i+span<ncol&&cols[i+span].grp===c.grp)span++;
+        top.push(c.grp);for(let j=1;j<span;j++)top.push("");
+        for(let j=0;j<span;j++)bot.push(cols[i+j].t); i+=span;}
+      else {top.push(c.t);bot.push(""); i++;}}
+    const rT=aoa.length; aoa.push(top); meta.push("htop");
+    const rB=aoa.length; aoa.push(bot); meta.push("hbot"); hBot=rB;
+    let i=0; while(i<ncol){const c=cols[i];
+      if(c.grp){let span=1;while(i+span<ncol&&cols[i+span].grp===c.grp)span++;
+        merges.push({s:{r:rT,c:i},e:{r:rT,c:i+span-1}}); i+=span;}
+      else {merges.push({s:{r:rT,c:i},e:{r:rB,c:i}}); i++;}}
+  } else { aoa.push(cols.map(c=>c.t)); meta.push("hdr"); hBot=aoa.length-1; }
+
+  // body
+  let no=1; const grand={};
+  order.forEach(z=>{
+    const sub={};
+    groups[z].forEach(r=>{
+      aoa.push(cols.map(c=>{
+        if(c.k==="no")return no++;
+        const v=r[c.k];
+        if(c.fmt){sub[c.k]=(sub[c.k]||0)+(Number(v)||0);grand[c.k]=(grand[c.k]||0)+(Number(v)||0);}
+        return c.fmt?(Number(v)||0):(v==null?"":v);
+      }));
+      meta.push(z==="ไม่มีใน Master"?"datamiss":"data");
+    });
+    const ri=aoa.length;
+    const row=cols.map(c=> c.fmt?+(sub[c.k]||0):""); row[0]=`รวมยอดขาย ${z}`;
+    aoa.push(row); meta.push("sub");
+    merges.push({s:{r:ri,c:0},e:{r:ri,c:firstFmt-1}});
+  });
+  const gi=aoa.length;
+  const grow=cols.map(c=> c.fmt?+(grand[c.k]||0):""); grow[0]="ยอดขายรวมสุทธิ";
+  aoa.push(grow); meta.push("grand");
+  merges.push({s:{r:gi,c:0},e:{r:gi,c:firstFmt-1}});
+
+  // build sheet
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=merges;
+  ws['!cols']=cols.map(c=>({wch: c.k==="no"?6 : (c.cls&&c.cls.includes("tx"))?34 : c.fmt?15 : 13}));
+  ws['!rows']=meta.map(m=> m==="title"?{hpt:26}:(m==="htop"||m==="hbot"||m==="hdr")?{hpt:19}:{hpt:16});
+
+  // styles
+  const thin={style:"thin",color:{rgb:"C6CFDA"}};
+  const bd={top:thin,bottom:thin,left:thin,right:thin};
+  const FONT="Tahoma";
+  for(let R=0;R<aoa.length;R++){
+    const m=meta[R];
+    for(let C=0;C<ncol;C++){
+      const addr=XLSX.utils.encode_cell({r:R,c:C});
+      if(!ws[addr]) ws[addr]={t:"s",v:""};
+      const col=cols[C];
+      const st={border:bd,alignment:{vertical:"center"},font:{name:FONT,sz:10}};
+      // number format on numeric cells of data/sub/grand rows
+      if(col.fmt && ["data","datamiss","sub","grand"].includes(m)){
+        ws[addr].z=col.z||"#,##0.00"; st.alignment.horizontal="right";
+      } else {
+        st.alignment.horizontal=(col.cls&&col.cls.includes("tx"))?"left":"center";
+      }
+      if(m==="title"){st.fill={fgColor:{rgb:"0F5D5A"}};st.font={name:FONT,sz:13,bold:true,color:{rgb:"FFFFFF"}};st.alignment.horizontal="center";}
+      else if(m==="htop"){st.fill={fgColor:{rgb:col.vat?"F3E2C6":"DBE6F0"}};st.font={name:FONT,sz:10,bold:true,color:{rgb:"0F5D5A"}};st.alignment.horizontal="center";}
+      else if(m==="hbot"||m==="hdr"){st.fill={fgColor:{rgb:col.vat?"F3E2C6":"EEF2F6"}};st.font={name:FONT,sz:10,bold:true};st.alignment.horizontal="center";}
+      else if(m==="sub"){st.fill={fgColor:{rgb:"E3EDF6"}};st.font={name:FONT,sz:10,bold:true,color:{rgb:"0F5D5A"}};if(C<firstFmt)st.alignment.horizontal="left";}
+      else if(m==="grand"){st.fill={fgColor:{rgb:"F5E4C2"}};st.font={name:FONT,sz:11,bold:true};if(C<firstFmt)st.alignment.horizontal="left";}
+      else if(m==="datamiss"){st.fill={fgColor:{rgb:"FBE9E7"}};st.font={name:FONT,sz:10,color:{rgb:"B3261E"}};}
+      else if(m==="data" && col.vat){st.fill={fgColor:{rgb:"FBF1E3"}};}
+      ws[addr].s=st;
+    }
+  }
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"สรุปยอดขาย");
+  XLSX.writeFile(wb,`สรุปยอดขาย_${s.name}.xlsx`);
+};
+
+document.getElementById("btnReset").onclick=()=>{
+  liveData=null;liveFile="";fileInput.value="";
+  document.getElementById("inspect").textContent="";
+  document.getElementById("btnExport").disabled=true;
+  renderReport();setStep(1);
+};
+
+/* init */
+renderRules(); renderReport();
+</script>
+</body>
+</html>
